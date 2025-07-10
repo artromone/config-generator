@@ -1,71 +1,217 @@
-# config/config.yaml.template
-title: &title project-staging
+# Game Server Configuration 🎮
+title: &title "awesome-game-server"
 
-env: stage # dev, stage, prod
+# Игровой сервер
+game:
+  name: "Super Adventure World"
+  version: "1.2.3"
+  max_players: 100
+  difficulty: "normal" # easy, normal, hard, nightmare
+  pvp_enabled: true
+  
+  # Настройки мира
+  world:
+    name: "Emerald Valley"
+    seed: "${WORLD_SEED:12345}"
+    size: "large" # small, medium, large, huge
+    weather_enabled: true
+    day_night_cycle: true
+    spawn_point:
+      x: 0
+      y: 100
+      z: 0
 
-server:
-  address: ":8080"
-  base_path: "/api/project/v1"
+  # Настройки игроков
+  player:
+    starting_health: 100
+    starting_money: "${STARTING_MONEY:500}"
+    max_inventory_slots: 30
+    respawn_time: 5
+    
+    # Стартовые предметы
+    starter_kit:
+      - "wooden_sword"
+      - "bread:5"
+      - "health_potion:2"
 
-postgres:
-  postgresql: "postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:${POSTGRES_PORT}/${POSTGRES_DB}?search_path=${POSTGRES_SCHEMA}&sslmode=${POSTGRES_SSL}"
-  max_open_conn: 50
-  max_idle_conn: 2
-  max_conn_lifetime: "15s"
+# Веб-сервер
+web:
+  host: "${SERVER_HOST:localhost}"
+  port: "${SERVER_PORT:8080}"
+  ssl_enabled: "${SSL_ENABLED:false}"
+  admin_panel: true
+  
+  # API настройки
+  api:
+    rate_limit: 1000
+    timeout: "30s"
+    cors_enabled: true
+    allowed_origins:
+      - "http://localhost:3000"
+      - "https://game.example.com"
 
-core:
-  api-address: "${CORE_ADDRESS}"
+# База данных
+database:
+  type: "postgresql"
+  connection: "postgresql://${DB_USER}:${DB_PASSWORD}@${DB_HOST}:${DB_PORT}/${DB_NAME}?sslmode=${DB_SSL:disable}"
+  
+  # Пул соединений
+  pool:
+    max_connections: 25
+    min_connections: 5
+    idle_timeout: "10m"
+    max_lifetime: "1h"
+  
+  # Миграции
+  migrations:
+    enabled: true
+    auto_migrate: "${AUTO_MIGRATE:true}"
+    backup_before_migrate: true
 
+# Аутентификация
 auth:
-  sso:
-    client:
-      base_url: "${AUTH_SSO_CLIENT_BASE_URL}"
-      client_id: "${CLIENT_ID}"
-      client_secret: "${CLIENT_SECRET}"
-      scopes:
-        - "stage"
-    server:
-      preset: "${AUTH_SSO_SERVER_PRESET}"
-
+  # Внешние провайдеры
+  providers:
+    google:
+      client_id: "${GOOGLE_CLIENT_ID}"
+      client_secret: "${GOOGLE_CLIENT_SECRET}"
+      enabled: true
+    
+    discord:
+      client_id: "${DISCORD_CLIENT_ID}"
+      client_secret: "${DISCORD_CLIENT_SECRET}"
+      enabled: true
+  
+  # JWT токены
+  jwt:
+    secret: "${JWT_SECRET}"
+    expires_in: "24h"
+    refresh_expires_in: "7d"
+    
+  # Сессии
   session:
-    access_cookie:
-      name: "${AUTH_SESSION_ACCESS_COOKIE_NAME}"
-      domain: "${AUTH_SESSION_ACCESS_COOKIE_DOMAIN}"
-      path: "/"
-      max_age: 14400
-      same_site: 2
-      secure: "${AUTH_SESSION_COOKIE_SECURE:false}"
-    refresh_cookie:
-      name: "${AUTH_SESSION_REFRESH_COOKIE_NAME}"
-      domain: "${AUTH_SESSION_REFRESH_COOKIE_DOMAIN}"
-      path: "/"
-      max_age: 14400
-      same_site: 2
-      secure: "${AUTH_SESSION_COOKIE_SECURE:false}"
-    token_validation: "${AUTH_SESSION_TOKEN_VALIDATION:true}"
-    aud_white_list:
-      - "stage"
+    cookie_name: "${SESSION_COOKIE_NAME:game_session}"
+    secure: "${SESSION_SECURE:false}"
+    max_age: 86400 # 24 hours
 
-log:
-  title: *title
-  output: "stdout"
-  level: "debug"
-  prettyLog: false
+# Функции игры
+features:
+  # Чат система
+  chat:
+    enabled: true
+    max_message_length: 200
+    spam_protection: true
+    bad_words_filter: true
+    channels:
+      - "global"
+      - "trade"
+      - "guild"
+  
+  # Экономика
+  economy:
+    inflation_rate: 0.02
+    tax_rate: "${TAX_RATE:0.05}"
+    daily_bonus: 100
+    
+    # Магазин
+    shop:
+      refresh_interval: "6h"
+      discount_events: true
+      seasonal_items: true
+  
+  # События
+  events:
+    double_xp:
+      enabled: true
+      schedule: "0 18 * * 6" # каждую субботу в 18:00
+      duration: "2h"
+    
+    boss_fights:
+      enabled: true
+      min_players: 5
+      rewards_multiplier: 2.0
 
-telemetry:
-  address: ":3000"
-  enable_profiling: true
-  monitoring:
-    collector:
-      namespace: "product"
-  trace:
-    collector_endpoint: "http://localhost:4318/v1/traces"
-    fraction: 1.0
-    service_name: *title
-    environment: "local"
-    options:
-      log_on_span: true
-    attributes:
-      first_tag: "test"
-      second_tag: "123"
+# Мониторинг и логи
+monitoring:
+  # Метрики
+  metrics:
+    enabled: true
+    endpoint: "/metrics"
+    collect_interval: "10s"
+    
+    # Что собираем
+    collect:
+      player_count: true
+      server_performance: true
+      game_events: true
+  
+  # Логирование
+  logging:
+    level: "${LOG_LEVEL:info}" # debug, info, warn, error
+    format: "json"
+    output: "stdout"
+    
+    # Файловые логи
+    file:
+      enabled: "${FILE_LOGGING:false}"
+      path: "./logs"
+      max_size: "100MB"
+      max_age: "30d"
 
+# Уведомления
+notifications:
+  # Email
+  email:
+    enabled: "${EMAIL_ENABLED:false}"
+    smtp_host: "${SMTP_HOST}"
+    smtp_port: "${SMTP_PORT:587}"
+    username: "${SMTP_USER}"
+    password: "${SMTP_PASSWORD}"
+    from: "${EMAIL_FROM:noreply@game.com}"
+  
+  # Веб-хуки
+  webhooks:
+    discord:
+      enabled: "${DISCORD_WEBHOOK_ENABLED:false}"
+      url: "${DISCORD_WEBHOOK_URL}"
+      events:
+        - "player_join"
+        - "player_leave"
+        - "server_start"
+        - "server_stop"
+
+# Кеширование
+cache:
+  type: "redis"
+  redis:
+    host: "${REDIS_HOST:localhost}"
+    port: "${REDIS_PORT:6379}"
+    password: "${REDIS_PASSWORD}"
+    database: 0
+    
+  # TTL настройки
+  ttl:
+    player_data: "15m"
+    world_data: "5m"
+    leaderboards: "1h"
+    shop_items: "6h"
+
+# Безопасность
+security:
+  # Защита от DDoS
+  rate_limiting:
+    enabled: true
+    requests_per_minute: 60
+    burst_size: 10
+  
+  # Античит
+  anticheat:
+    enabled: true
+    strict_mode: "${ANTICHEAT_STRICT:false}"
+    auto_ban: true
+    
+    # Проверки
+    checks:
+      speed_hack: true
+      fly_hack: true
+      item_duplication: true

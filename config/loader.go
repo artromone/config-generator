@@ -1,52 +1,73 @@
-// config/loader.go
 package config
 
 import (
 	"fmt"
 	"os"
+	"regexp"
 	"strings"
 
 	"github.com/knadh/koanf/parsers/yaml"
 	"github.com/knadh/koanf/providers/env"
-	"github.com/knadh/koanf/providers/file"
+	"github.com/knadh/koanf/providers/rawbytes"
 	"github.com/knadh/koanf/v2"
 )
 
 func LoadConfig() (*Config, error) {
 	k := koanf.New(".")
 
-	// 1. Загружаем базовую конфигурацию из YAML
+	loadEnvFile(".env.local")
+
 	configFile := "config/config.yaml"
 	if _, err := os.Stat(configFile); os.IsNotExist(err) {
 		configFile = "config/config.yaml.template"
 	}
 
-	if err := k.Load(file.Provider(configFile), yaml.Parser()); err != nil {
+	content, err := os.ReadFile(configFile)
+	if err != nil {
+		return nil, fmt.Errorf("error reading config file: %w", err)
+	}
+
+	processedContent := expandEnvVars(string(content))
+
+	if err := k.Load(rawbytes.Provider([]byte(processedContent)), yaml.Parser()); err != nil {
 		return nil, fmt.Errorf("error loading config file: %w", err)
 	}
 
-	// 2. Загружаем переменные окружения из .env.local
-	loadEnvFile(".env.local")
-
-	// 3. Переопределяем системными переменными окружения
 	if err := k.Load(env.Provider("", ".", func(s string) string {
-		return strings.Replace(strings.ToLower(s), "_", ".", -1)
+		return strings.ReplaceAll(strings.ToLower(s), "_", ".")
 	}), nil); err != nil {
 		return nil, fmt.Errorf("error loading env vars: %w", err)
 	}
 
-	// 4. Unmarshaling в структуру
 	var cfg Config
 	if err := k.Unmarshal("", &cfg); err != nil {
 		return nil, fmt.Errorf("error unmarshaling config: %w", err)
 	}
 
-	// 5. Валидация
-	if err := cfg.Validate(); err != nil {
-		return nil, fmt.Errorf("config validation failed: %w", err)
-	}
-
 	return &cfg, nil
+}
+
+func expandEnvVars(content string) string {
+	re := regexp.MustCompile(`\$\{([^}:]+)(?::([^}]*))?\}`)
+
+	return re.ReplaceAllStringFunc(content, func(match string) string {
+		submatches := re.FindStringSubmatch(match)
+		if len(submatches) < 2 {
+			return match
+		}
+
+		envVar := submatches[1]
+		defaultValue := ""
+		if len(submatches) > 2 {
+			defaultValue = submatches[2]
+		}
+
+		if value := os.Getenv(envVar); value != "" {
+			return value
+		}
+
+		return defaultValue
+	})
 }
 
 func loadEnvFile(filename string) {

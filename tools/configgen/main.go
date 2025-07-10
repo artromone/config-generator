@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"regexp"
+	"slices"
 	"sort"
 	"strings"
 	"text/template"
@@ -150,30 +151,25 @@ func extractEnvVarsFromContent(content string) []ConfigField {
 
 func generateStructsFromTree(node *YamlNode, envVars []ConfigField) []ConfigStruct {
 	var allStructs []ConfigStruct
-	structMap := make(map[string]bool) // Для предотвращения дублирования
+	structMap := make(map[string]bool)
 
-	// Создаем главную структуру Config
 	mainStruct := ConfigStruct{
 		Name:   "Config",
 		Fields: []ConfigField{},
 	}
 
-	// Обрабатываем каждый раздел верхнего уровня
 	for key, child := range node.Children {
-		if shouldSkipField(key, child) {
+		if shouldSkipField(child) {
 			continue
 		}
 
 		structName := strings.Title(toCamelCase(key))
 
-		// Генерируем структуру и все её вложенные структуры
 		childStructs := generateStructFromNode(child, structName, envVars, key, structMap)
 
 		if len(childStructs) > 0 && len(childStructs[0].Fields) > 0 {
-			// Добавляем все сгенерированные структуры
 			allStructs = append(allStructs, childStructs...)
 
-			// Добавляем поле в главную структуру
 			mainStruct.Fields = append(mainStruct.Fields, ConfigField{
 				Name:     structName,
 				GoType:   structName + "Struct",
@@ -183,15 +179,13 @@ func generateStructsFromTree(node *YamlNode, envVars []ConfigField) []ConfigStru
 		}
 	}
 
-	// Добавляем главную структуру в начало
 	result := []ConfigStruct{mainStruct}
 	result = append(result, allStructs...)
 
 	return result
 }
 
-func shouldSkipField(key string, node *YamlNode) bool {
-	// Пропускаем YAML якоря и простые строковые значения без переменных окружения
+func shouldSkipField(node *YamlNode) bool {
 	if len(node.Children) == 0 && len(node.EnvVars) == 0 {
 		return true
 	}
@@ -200,7 +194,7 @@ func shouldSkipField(key string, node *YamlNode) bool {
 
 func generateStructFromNode(node *YamlNode, structName string, envVars []ConfigField, yamlPath string, structMap map[string]bool) []ConfigStruct {
 	if structMap[structName] {
-		return []ConfigStruct{} // Уже создана
+		return []ConfigStruct{}
 	}
 	structMap[structName] = true
 
@@ -211,20 +205,16 @@ func generateStructFromNode(node *YamlNode, structName string, envVars []ConfigF
 		Fields: []ConfigField{},
 	}
 
-	// Обрабатываем дочерние узлы
 	for key, child := range node.Children {
 		fieldName := strings.Title(toCamelCase(key))
 		childPath := yamlPath + "." + key
 
 		if len(child.Children) > 0 {
-			// Это вложенная структура
 			childStructName := structName + fieldName
 
-			// Рекурсивно генерируем вложенные структуры
 			childStructs := generateStructFromNode(child, childStructName, envVars, childPath, structMap)
 			allStructs = append(allStructs, childStructs...)
 
-			// Добавляем поле для вложенной структуры
 			struct_.Fields = append(struct_.Fields, ConfigField{
 				Name:     fieldName,
 				GoType:   childStructName + "Struct",
@@ -232,11 +222,9 @@ func generateStructFromNode(node *YamlNode, structName string, envVars []ConfigF
 				Tags:     fmt.Sprintf("`koanf:\"%s\"`", key),
 			})
 		} else {
-			// Это обычное поле
 			goType := "string"
 			envVar := ""
 
-			// Ищем соответствующую переменную окружения
 			for _, env := range envVars {
 				if matchesEnvVar(childPath, env.EnvVar) {
 					goType = env.GoType
@@ -245,7 +233,6 @@ func generateStructFromNode(node *YamlNode, structName string, envVars []ConfigF
 				}
 			}
 
-			// Определяем тип из значения
 			if child.Value != nil {
 				goType = inferGoTypeFromValue(child.Value)
 			}
@@ -265,7 +252,6 @@ func generateStructFromNode(node *YamlNode, structName string, envVars []ConfigF
 		}
 	}
 
-	// Добавляем текущую структуру в начало списка
 	if len(struct_.Fields) > 0 {
 		result := []ConfigStruct{struct_}
 		result = append(result, allStructs...)
@@ -276,20 +262,15 @@ func generateStructFromNode(node *YamlNode, structName string, envVars []ConfigF
 }
 
 func matchesEnvVar(yamlPath, envVar string) bool {
-	// Улучшенная логика сопоставления
 	pathParts := strings.Split(strings.ToLower(yamlPath), ".")
 	envParts := strings.Split(strings.ToLower(envVar), "_")
 
-	// Проверяем точное соответствие частей
 	for _, envPart := range envParts {
-		for _, pathPart := range pathParts {
-			if envPart == pathPart {
-				return true
-			}
+		if slices.Contains(pathParts, envPart) {
+			return true
 		}
 	}
 
-	// Проверяем вхождение подстрок
 	pathStr := strings.Join(pathParts, "")
 	envStr := strings.Join(envParts, "")
 
@@ -399,12 +380,10 @@ type {{.Name}}{{if ne .Name "Config"}}Struct{{end}} struct {
 func NewConfig() (*Config, error) {
 	k := koanf.New(".")
 	
-	// Загружаем конфигурацию из файла
 	if err := k.Load(file.Provider("config/config.yaml"), yaml.Parser()); err != nil {
 		return nil, fmt.Errorf("error loading config file: %w", err)
 	}
 
-	// Переопределяем переменными окружения
 	if err := k.Load(env.Provider("", ".", func(s string) string {
 		return strings.Replace(strings.ToLower(s), "_", ".", -1)
 	}), nil); err != nil {
@@ -417,11 +396,6 @@ func NewConfig() (*Config, error) {
 	}
 
 	return &cfg, nil
-}
-
-func (c *Config) Validate() error {
-	// Добавьте свою валидацию здесь
-	return nil
 }
 `
 
@@ -444,7 +418,6 @@ func (c *Config) Validate() error {
 	}
 }
 
-// Остальные функции остаются без изменений...
 func generateEnvFiles(fields []ConfigField) {
 	generateEnvExample(fields)
 	generateEnvLocal(fields)
@@ -466,9 +439,9 @@ func generateEnvExample(fields []ConfigField) {
 
 	for _, field := range fields {
 		if field.Required {
-			file.WriteString(fmt.Sprintf("%s=\n", field.EnvVar))
+			fmt.Fprintf(file, "%s=\n", field.EnvVar)
 		} else {
-			file.WriteString(fmt.Sprintf("%s=%s\n", field.EnvVar, field.DefaultValue))
+			fmt.Fprintf(file, "%s=%s\n", field.EnvVar, field.DefaultValue)
 		}
 	}
 }
@@ -488,7 +461,7 @@ func generateEnvLocal(fields []ConfigField) {
 	file.WriteString("# Add your actual values here\n\n")
 
 	for _, field := range fields {
-		file.WriteString(fmt.Sprintf("%s=%s\n", field.EnvVar, field.DefaultValue))
+		fmt.Fprintf(file, "%s=%s\n", field.EnvVar, field.DefaultValue)
 	}
 }
 
@@ -541,8 +514,8 @@ func extractEnvVarsFromEnvFile() []string {
 	}
 
 	var vars []string
-	lines := strings.Split(string(content), "\n")
-	for _, line := range lines {
+	lines := strings.SplitSeq(string(content), "\n")
+	for line := range lines {
 		line = strings.TrimSpace(line)
 		if line != "" && !strings.HasPrefix(line, "#") {
 			parts := strings.Split(line, "=")

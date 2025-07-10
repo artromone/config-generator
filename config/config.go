@@ -4,133 +4,319 @@ package config
 import (
 	"fmt"
 	"strings"
-
+	"github.com/knadh/koanf/v2"
 	"github.com/knadh/koanf/parsers/yaml"
 	"github.com/knadh/koanf/providers/env"
 	"github.com/knadh/koanf/providers/file"
-	"github.com/knadh/koanf/v2"
 )
 
+
 type Config struct {
-	Log       LogStruct       `koanf:"log"`
-	Telemetry TelemetryStruct `koanf:"telemetry"`
-	Server    ServerStruct    `koanf:"server"`
-	Postgres  PostgresStruct  `koanf:"postgres"`
-	Core      CoreStruct      `koanf:"core"`
-	Auth      AuthStruct      `koanf:"auth"`
+	Game GameStruct `koanf:"game"`
+	Web WebStruct `koanf:"web"`
+	Database DatabaseStruct `koanf:"database"`
+	Notifications NotificationsStruct `koanf:"notifications"`
+	Security SecurityStruct `koanf:"security"`
+	Cache CacheStruct `koanf:"cache"`
+	Auth AuthStruct `koanf:"auth"`
+	Features FeaturesStruct `koanf:"features"`
+	Monitoring MonitoringStruct `koanf:"monitoring"`
 }
 
-type LogStruct struct {
-	Prettylog bool   `koanf:"prettyLog"`
-	Title     string `koanf:"title"`
-	Output    string `koanf:"output"`
-	Level     string `koanf:"level"`
+
+type GameStruct struct {
+	World GameWorldStruct `koanf:"world"`
+	Player GamePlayerStruct `koanf:"player"`
+	Name string `koanf:"name" env:"DB_NAME"`
+	Version string `koanf:"version"`
+	MaxPlayers int `koanf:"max_players"`
+	Difficulty string `koanf:"difficulty"`
+	PvpEnabled bool `koanf:"pvp_enabled"`
 }
 
-type TelemetryStruct struct {
-	Address         string                    `koanf:"address" env:"CORE_ADDRESS"`
-	EnableProfiling bool                      `koanf:"enable_profiling"`
-	Monitoring      TelemetryMonitoringStruct `koanf:"monitoring"`
-	Trace           TelemetryTraceStruct      `koanf:"trace"`
+
+type GameWorldStruct struct {
+	Size string `koanf:"size" env:"WORLD_SEED"`
+	WeatherEnabled bool `koanf:"weather_enabled" env:"WORLD_SEED"`
+	DayNightCycle bool `koanf:"day_night_cycle" env:"WORLD_SEED"`
+	SpawnPoint GameWorldSpawnPointStruct `koanf:"spawn_point"`
+	Name string `koanf:"name" env:"WORLD_SEED"`
+	Seed string `koanf:"seed" env:"WORLD_SEED"`
 }
 
-type TelemetryMonitoringStruct struct {
-	Collector TelemetryMonitoringCollectorStruct `koanf:"collector"`
+
+type GameWorldSpawnPointStruct struct {
+	X int `koanf:"x" env:"WORLD_SEED"`
+	Y int `koanf:"y" env:"WORLD_SEED"`
+	Z int `koanf:"z" env:"WORLD_SEED"`
 }
 
-type TelemetryMonitoringCollectorStruct struct {
-	Namespace string `koanf:"namespace"`
+
+type GamePlayerStruct struct {
+	StarterKit []string `koanf:"starter_kit"`
+	StartingHealth int `koanf:"starting_health"`
+	StartingMoney string `koanf:"starting_money"`
+	MaxInventorySlots int `koanf:"max_inventory_slots"`
+	RespawnTime int `koanf:"respawn_time"`
 }
 
-type TelemetryTraceStruct struct {
-	Fraction          float64                        `koanf:"fraction"`
-	ServiceName       string                         `koanf:"service_name"`
-	Environment       string                         `koanf:"environment"`
-	Options           TelemetryTraceOptionsStruct    `koanf:"options"`
-	Attributes        TelemetryTraceAttributesStruct `koanf:"attributes"`
-	CollectorEndpoint string                         `koanf:"collector_endpoint"`
+
+type WebStruct struct {
+	Port string `koanf:"port" env:"SERVER_PORT"`
+	SslEnabled string `koanf:"ssl_enabled"`
+	AdminPanel bool `koanf:"admin_panel"`
+	Api WebApiStruct `koanf:"api"`
+	Host string `koanf:"host" env:"SERVER_HOST"`
 }
 
-type TelemetryTraceOptionsStruct struct {
-	LogOnSpan bool `koanf:"log_on_span"`
+
+type WebApiStruct struct {
+	CorsEnabled bool `koanf:"cors_enabled"`
+	AllowedOrigins []string `koanf:"allowed_origins"`
+	RateLimit int `koanf:"rate_limit"`
+	Timeout string `koanf:"timeout"`
 }
 
-type TelemetryTraceAttributesStruct struct {
-	FirstTag  string `koanf:"first_tag"`
-	SecondTag int    `koanf:"second_tag"`
+
+type DatabaseStruct struct {
+	Migrations DatabaseMigrationsStruct `koanf:"migrations"`
+	Type string `koanf:"type"`
+	Connection string `koanf:"connection"`
+	Pool DatabasePoolStruct `koanf:"pool"`
 }
 
-type ServerStruct struct {
-	Address  string `koanf:"address" env:"CORE_ADDRESS"`
-	BasePath string `koanf:"base_path" env:"AUTH_SSO_SERVER_PRESET"`
+
+type DatabaseMigrationsStruct struct {
+	BackupBeforeMigrate bool `koanf:"backup_before_migrate"`
+	Enabled bool `koanf:"enabled" env:"SSL_ENABLED"`
+	AutoMigrate string `koanf:"auto_migrate"`
 }
 
-type PostgresStruct struct {
-	MaxConnLifetime string `koanf:"max_conn_lifetime" env:"POSTGRES_USER"`
-	Postgresql      string `koanf:"postgresql" env:"POSTGRES_USER"`
-	MaxOpenConn     int    `koanf:"max_open_conn" env:"POSTGRES_USER"`
-	MaxIdleConn     int    `koanf:"max_idle_conn" env:"POSTGRES_USER"`
+
+type DatabasePoolStruct struct {
+	MaxLifetime string `koanf:"max_lifetime"`
+	MaxConnections int `koanf:"max_connections"`
+	MinConnections int `koanf:"min_connections"`
+	IdleTimeout string `koanf:"idle_timeout"`
 }
 
-type CoreStruct struct {
-	ApiAddress string `koanf:"api-address" env:"CORE_ADDRESS"`
+
+type NotificationsStruct struct {
+	Webhooks NotificationsWebhooksStruct `koanf:"webhooks"`
+	Email NotificationsEmailStruct `koanf:"email"`
 }
+
+
+type NotificationsWebhooksStruct struct {
+	Discord NotificationsWebhooksDiscordStruct `koanf:"discord"`
+}
+
+
+type NotificationsWebhooksDiscordStruct struct {
+	Enabled string `koanf:"enabled" env:"SSL_ENABLED"`
+	Url string `koanf:"url" env:"DISCORD_CLIENT_ID"`
+	Events []string `koanf:"events" env:"DISCORD_CLIENT_ID"`
+}
+
+
+type NotificationsEmailStruct struct {
+	Password string `koanf:"password" env:"DB_PASSWORD"`
+	From string `koanf:"from" env:"EMAIL_ENABLED"`
+	Enabled string `koanf:"enabled" env:"SSL_ENABLED"`
+	SmtpHost string `koanf:"smtp_host" env:"EMAIL_ENABLED"`
+	SmtpPort string `koanf:"smtp_port" env:"EMAIL_ENABLED"`
+	Username string `koanf:"username" env:"EMAIL_ENABLED"`
+}
+
+
+type SecurityStruct struct {
+	RateLimiting SecurityRateLimitingStruct `koanf:"rate_limiting"`
+	Anticheat SecurityAnticheatStruct `koanf:"anticheat"`
+}
+
+
+type SecurityRateLimitingStruct struct {
+	Enabled bool `koanf:"enabled" env:"SSL_ENABLED"`
+	RequestsPerMinute int `koanf:"requests_per_minute"`
+	BurstSize int `koanf:"burst_size"`
+}
+
+
+type SecurityAnticheatStruct struct {
+	Enabled bool `koanf:"enabled" env:"SSL_ENABLED"`
+	StrictMode string `koanf:"strict_mode" env:"ANTICHEAT_STRICT"`
+	AutoBan bool `koanf:"auto_ban" env:"ANTICHEAT_STRICT"`
+	Checks SecurityAnticheatChecksStruct `koanf:"checks"`
+}
+
+
+type SecurityAnticheatChecksStruct struct {
+	ItemDuplication bool `koanf:"item_duplication" env:"ANTICHEAT_STRICT"`
+	SpeedHack bool `koanf:"speed_hack" env:"ANTICHEAT_STRICT"`
+	FlyHack bool `koanf:"fly_hack" env:"ANTICHEAT_STRICT"`
+}
+
+
+type CacheStruct struct {
+	Type string `koanf:"type"`
+	Redis CacheRedisStruct `koanf:"redis"`
+	Ttl CacheTtlStruct `koanf:"ttl"`
+}
+
+
+type CacheRedisStruct struct {
+	Database int `koanf:"database" env:"REDIS_HOST"`
+	Host string `koanf:"host" env:"SERVER_HOST"`
+	Port string `koanf:"port" env:"SERVER_PORT"`
+	Password string `koanf:"password" env:"DB_PASSWORD"`
+}
+
+
+type CacheTtlStruct struct {
+	WorldData string `koanf:"world_data"`
+	Leaderboards string `koanf:"leaderboards"`
+	ShopItems string `koanf:"shop_items"`
+	PlayerData string `koanf:"player_data"`
+}
+
 
 type AuthStruct struct {
-	Sso     AuthSsoStruct     `koanf:"sso"`
+	Jwt AuthJwtStruct `koanf:"jwt"`
 	Session AuthSessionStruct `koanf:"session"`
+	Providers AuthProvidersStruct `koanf:"providers"`
 }
 
-type AuthSsoStruct struct {
-	Client AuthSsoClientStruct `koanf:"client"`
-	Server AuthSsoServerStruct `koanf:"server"`
+
+type AuthJwtStruct struct {
+	Secret string `koanf:"secret" env:"GOOGLE_CLIENT_SECRET"`
+	ExpiresIn string `koanf:"expires_in" env:"JWT_SECRET"`
+	RefreshExpiresIn string `koanf:"refresh_expires_in" env:"JWT_SECRET"`
 }
 
-type AuthSsoClientStruct struct {
-	BaseUrl      string   `koanf:"base_url" env:"AUTH_SSO_CLIENT_BASE_URL"`
-	ClientId     string   `koanf:"client_id" env:"AUTH_SSO_CLIENT_BASE_URL"`
-	ClientSecret string   `koanf:"client_secret" env:"AUTH_SSO_CLIENT_BASE_URL"`
-	Scopes       []string `koanf:"scopes" env:"AUTH_SSO_CLIENT_BASE_URL"`
-}
-
-type AuthSsoServerStruct struct {
-	Preset string `koanf:"preset" env:"AUTH_SSO_CLIENT_BASE_URL"`
-}
 
 type AuthSessionStruct struct {
-	TokenValidation string                         `koanf:"token_validation" env:"AUTH_SSO_CLIENT_BASE_URL"`
-	AudWhiteList    []string                       `koanf:"aud_white_list" env:"AUTH_SSO_CLIENT_BASE_URL"`
-	AccessCookie    AuthSessionAccessCookieStruct  `koanf:"access_cookie"`
-	RefreshCookie   AuthSessionRefreshCookieStruct `koanf:"refresh_cookie"`
+	CookieName string `koanf:"cookie_name" env:"SESSION_COOKIE_NAME"`
+	Secure string `koanf:"secure" env:"SESSION_COOKIE_NAME"`
+	MaxAge int `koanf:"max_age" env:"SESSION_COOKIE_NAME"`
 }
 
-type AuthSessionAccessCookieStruct struct {
-	SameSite int    `koanf:"same_site" env:"AUTH_SSO_CLIENT_BASE_URL"`
-	Secure   string `koanf:"secure" env:"AUTH_SSO_CLIENT_BASE_URL"`
-	Name     string `koanf:"name" env:"AUTH_SSO_CLIENT_BASE_URL"`
-	Domain   string `koanf:"domain" env:"AUTH_SSO_CLIENT_BASE_URL"`
-	Path     string `koanf:"path" env:"AUTH_SSO_CLIENT_BASE_URL"`
-	MaxAge   int    `koanf:"max_age" env:"AUTH_SSO_CLIENT_BASE_URL"`
+
+type AuthProvidersStruct struct {
+	Google AuthProvidersGoogleStruct `koanf:"google"`
+	Discord AuthProvidersDiscordStruct `koanf:"discord"`
 }
 
-type AuthSessionRefreshCookieStruct struct {
-	Domain   string `koanf:"domain" env:"AUTH_SSO_CLIENT_BASE_URL"`
-	Path     string `koanf:"path" env:"AUTH_SSO_CLIENT_BASE_URL"`
-	MaxAge   int    `koanf:"max_age" env:"AUTH_SSO_CLIENT_BASE_URL"`
-	SameSite int    `koanf:"same_site" env:"AUTH_SSO_CLIENT_BASE_URL"`
-	Secure   string `koanf:"secure" env:"AUTH_SSO_CLIENT_BASE_URL"`
-	Name     string `koanf:"name" env:"AUTH_SSO_CLIENT_BASE_URL"`
+
+type AuthProvidersGoogleStruct struct {
+	ClientId string `koanf:"client_id" env:"GOOGLE_CLIENT_ID"`
+	ClientSecret string `koanf:"client_secret" env:"GOOGLE_CLIENT_ID"`
+	Enabled bool `koanf:"enabled" env:"SSL_ENABLED"`
 }
+
+
+type AuthProvidersDiscordStruct struct {
+	Enabled bool `koanf:"enabled" env:"SSL_ENABLED"`
+	ClientId string `koanf:"client_id" env:"DISCORD_CLIENT_ID"`
+	ClientSecret string `koanf:"client_secret" env:"DISCORD_CLIENT_ID"`
+}
+
+
+type FeaturesStruct struct {
+	Chat FeaturesChatStruct `koanf:"chat"`
+	Economy FeaturesEconomyStruct `koanf:"economy"`
+	Events FeaturesEventsStruct `koanf:"events"`
+}
+
+
+type FeaturesChatStruct struct {
+	Channels []string `koanf:"channels"`
+	Enabled bool `koanf:"enabled" env:"SSL_ENABLED"`
+	MaxMessageLength int `koanf:"max_message_length"`
+	SpamProtection bool `koanf:"spam_protection"`
+	BadWordsFilter bool `koanf:"bad_words_filter"`
+}
+
+
+type FeaturesEconomyStruct struct {
+	DailyBonus int `koanf:"daily_bonus"`
+	Shop FeaturesEconomyShopStruct `koanf:"shop"`
+	InflationRate float64 `koanf:"inflation_rate"`
+	TaxRate string `koanf:"tax_rate"`
+}
+
+
+type FeaturesEconomyShopStruct struct {
+	SeasonalItems bool `koanf:"seasonal_items"`
+	RefreshInterval string `koanf:"refresh_interval"`
+	DiscountEvents bool `koanf:"discount_events"`
+}
+
+
+type FeaturesEventsStruct struct {
+	DoubleXp FeaturesEventsDoubleXpStruct `koanf:"double_xp"`
+	BossFights FeaturesEventsBossFightsStruct `koanf:"boss_fights"`
+}
+
+
+type FeaturesEventsDoubleXpStruct struct {
+	Enabled bool `koanf:"enabled" env:"SSL_ENABLED"`
+	Schedule string `koanf:"schedule"`
+	Duration string `koanf:"duration"`
+}
+
+
+type FeaturesEventsBossFightsStruct struct {
+	Enabled bool `koanf:"enabled" env:"SSL_ENABLED"`
+	MinPlayers int `koanf:"min_players"`
+	RewardsMultiplier float64 `koanf:"rewards_multiplier"`
+}
+
+
+type MonitoringStruct struct {
+	Metrics MonitoringMetricsStruct `koanf:"metrics"`
+	Logging MonitoringLoggingStruct `koanf:"logging"`
+}
+
+
+type MonitoringMetricsStruct struct {
+	Endpoint string `koanf:"endpoint"`
+	CollectInterval string `koanf:"collect_interval"`
+	Collect MonitoringMetricsCollectStruct `koanf:"collect"`
+	Enabled bool `koanf:"enabled" env:"SSL_ENABLED"`
+}
+
+
+type MonitoringMetricsCollectStruct struct {
+	GameEvents bool `koanf:"game_events"`
+	PlayerCount bool `koanf:"player_count"`
+	ServerPerformance bool `koanf:"server_performance"`
+}
+
+
+type MonitoringLoggingStruct struct {
+	Format string `koanf:"format" env:"FILE_LOGGING"`
+	Output string `koanf:"output" env:"FILE_LOGGING"`
+	File MonitoringLoggingFileStruct `koanf:"file"`
+	Level string `koanf:"level" env:"LOG_LEVEL"`
+}
+
+
+type MonitoringLoggingFileStruct struct {
+	MaxAge string `koanf:"max_age" env:"FILE_LOGGING"`
+	Enabled string `koanf:"enabled" env:"SSL_ENABLED"`
+	Path string `koanf:"path" env:"FILE_LOGGING"`
+	MaxSize string `koanf:"max_size" env:"FILE_LOGGING"`
+}
+
+
 
 func NewConfig() (*Config, error) {
 	k := koanf.New(".")
-
-	// Загружаем конфигурацию из файла
+	
 	if err := k.Load(file.Provider("config/config.yaml"), yaml.Parser()); err != nil {
 		return nil, fmt.Errorf("error loading config file: %w", err)
 	}
 
-	// Переопределяем переменными окружения
 	if err := k.Load(env.Provider("", ".", func(s string) string {
 		return strings.Replace(strings.ToLower(s), "_", ".", -1)
 	}), nil); err != nil {
@@ -143,9 +329,4 @@ func NewConfig() (*Config, error) {
 	}
 
 	return &cfg, nil
-}
-
-func (c *Config) Validate() error {
-	// Добавьте свою валидацию здесь
-	return nil
 }
