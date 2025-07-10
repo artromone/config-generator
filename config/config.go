@@ -12,16 +12,29 @@ import (
 var k = koanf.New(".")
 
 type Config struct {
+	Metrics MetricsStruct `koanf:"metrics"`
+	Swagger SwaggerStruct `koanf:"swagger"`
+	App AppStruct `koanf:"app"`
 	Http HttpStruct `koanf:"http"`
 	Log LogStruct `koanf:"log"`
 	Database DatabaseStruct `koanf:"database"`
 	Grpc GrpcStruct `koanf:"grpc"`
 	Rmq RmqStruct `koanf:"rmq"`
-	Metrics MetricsStruct `koanf:"metrics"`
-	Swagger SwaggerStruct `koanf:"swagger"`
-	App AppStruct `koanf:"app"`
 }
 
+
+type MetricsStruct struct {
+	MetricsEnabled bool `koanf:"enabled" env:"METRICS_ENABLED"`
+}
+
+type SwaggerStruct struct {
+	SwaggerEnabled bool `koanf:"enabled" env:"SWAGGER_ENABLED"`
+}
+
+type AppStruct struct {
+	AppName string `koanf:"name" env:"APP_NAME"`
+	AppVersion string `koanf:"version" env:"APP_VERSION"`
+}
 
 type HttpStruct struct {
 	HttpPort string `koanf:"port" env:"HTTP_PORT"`
@@ -45,19 +58,6 @@ type RmqStruct struct {
 	RmqRpcServer string `koanf:"server_exchange" env:"RMQ_RPC_SERVER"`
 	RmqRpcClient string `koanf:"client_exchange" env:"RMQ_RPC_CLIENT"`
 	RmqUrl string `koanf:"url" env:"RMQ_URL"`
-}
-
-type MetricsStruct struct {
-	MetricsEnabled bool `koanf:"enabled" env:"METRICS_ENABLED"`
-}
-
-type SwaggerStruct struct {
-	SwaggerEnabled bool `koanf:"enabled" env:"SWAGGER_ENABLED"`
-}
-
-type AppStruct struct {
-	AppName string `koanf:"name" env:"APP_NAME"`
-	AppVersion string `koanf:"version" env:"APP_VERSION"`
 }
 
 
