@@ -1,0 +1,28 @@
+app:
+  name: "${APP_NAME}"
+  version: "${APP_VERSION}"
+
+http:
+  port: "${HTTP_PORT}"
+  use_prefork_mode: "${HTTP_USE_PREFORK_MODE:false}"
+
+log:
+  level: "${LOG_LEVEL}"
+
+database:
+  pool_max: "${DATABASE_POOL_MAX}"
+  url: "${DATABASE_URL}"
+
+grpc:
+  port: "${GRPC_PORT}"
+
+rmq:
+  server_exchange: "${RMQ_RPC_SERVER}"
+  client_exchange: "${RMQ_RPC_CLIENT}"
+  url: "${RMQ_URL}"
+
+metrics:
+  enabled: "${METRICS_ENABLED:true}"
+
+swagger:
+  enabled: "${SWAGGER_ENABLED:false}"
