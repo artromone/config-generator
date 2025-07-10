@@ -3,65 +3,128 @@ package config
 
 import (
 	"fmt"
-	"github.com/knadh/koanf/v2"
+	"strings"
+
 	"github.com/knadh/koanf/parsers/yaml"
 	"github.com/knadh/koanf/providers/env"
 	"github.com/knadh/koanf/providers/file"
+	"github.com/knadh/koanf/v2"
 )
 
-var k = koanf.New(".")
-
 type Config struct {
-	Metrics MetricsStruct `koanf:"metrics"`
-	Swagger SwaggerStruct `koanf:"swagger"`
-	App AppStruct `koanf:"app"`
-	Http HttpStruct `koanf:"http"`
-	Log LogStruct `koanf:"log"`
-	Database DatabaseStruct `koanf:"database"`
-	Grpc GrpcStruct `koanf:"grpc"`
-	Rmq RmqStruct `koanf:"rmq"`
-}
-
-
-type MetricsStruct struct {
-	MetricsEnabled bool `koanf:"enabled" env:"METRICS_ENABLED"`
-}
-
-type SwaggerStruct struct {
-	SwaggerEnabled bool `koanf:"enabled" env:"SWAGGER_ENABLED"`
-}
-
-type AppStruct struct {
-	AppName string `koanf:"name" env:"APP_NAME"`
-	AppVersion string `koanf:"version" env:"APP_VERSION"`
-}
-
-type HttpStruct struct {
-	HttpPort string `koanf:"port" env:"HTTP_PORT"`
-	HttpUsePreforkMode bool `koanf:"use_prefork_mode" env:"HTTP_USE_PREFORK_MODE"`
+	Log       LogStruct       `koanf:"log"`
+	Telemetry TelemetryStruct `koanf:"telemetry"`
+	Server    ServerStruct    `koanf:"server"`
+	Postgres  PostgresStruct  `koanf:"postgres"`
+	Core      CoreStruct      `koanf:"core"`
+	Auth      AuthStruct      `koanf:"auth"`
 }
 
 type LogStruct struct {
-	LogLevel string `koanf:"level" env:"LOG_LEVEL"`
+	Prettylog bool   `koanf:"prettyLog"`
+	Title     string `koanf:"title"`
+	Output    string `koanf:"output"`
+	Level     string `koanf:"level"`
 }
 
-type DatabaseStruct struct {
-	DatabasePoolMax string `koanf:"pool_max" env:"DATABASE_POOL_MAX"`
-	DatabaseUrl string `koanf:"url" env:"DATABASE_URL"`
+type TelemetryStruct struct {
+	Address         string                    `koanf:"address" env:"CORE_ADDRESS"`
+	EnableProfiling bool                      `koanf:"enable_profiling"`
+	Monitoring      TelemetryMonitoringStruct `koanf:"monitoring"`
+	Trace           TelemetryTraceStruct      `koanf:"trace"`
 }
 
-type GrpcStruct struct {
-	GrpcPort string `koanf:"port" env:"GRPC_PORT"`
+type TelemetryMonitoringStruct struct {
+	Collector TelemetryMonitoringCollectorStruct `koanf:"collector"`
 }
 
-type RmqStruct struct {
-	RmqRpcServer string `koanf:"server_exchange" env:"RMQ_RPC_SERVER"`
-	RmqRpcClient string `koanf:"client_exchange" env:"RMQ_RPC_CLIENT"`
-	RmqUrl string `koanf:"url" env:"RMQ_URL"`
+type TelemetryMonitoringCollectorStruct struct {
+	Namespace string `koanf:"namespace"`
 }
 
+type TelemetryTraceStruct struct {
+	Fraction          float64                        `koanf:"fraction"`
+	ServiceName       string                         `koanf:"service_name"`
+	Environment       string                         `koanf:"environment"`
+	Options           TelemetryTraceOptionsStruct    `koanf:"options"`
+	Attributes        TelemetryTraceAttributesStruct `koanf:"attributes"`
+	CollectorEndpoint string                         `koanf:"collector_endpoint"`
+}
+
+type TelemetryTraceOptionsStruct struct {
+	LogOnSpan bool `koanf:"log_on_span"`
+}
+
+type TelemetryTraceAttributesStruct struct {
+	FirstTag  string `koanf:"first_tag"`
+	SecondTag int    `koanf:"second_tag"`
+}
+
+type ServerStruct struct {
+	Address  string `koanf:"address" env:"CORE_ADDRESS"`
+	BasePath string `koanf:"base_path" env:"AUTH_SSO_SERVER_PRESET"`
+}
+
+type PostgresStruct struct {
+	MaxConnLifetime string `koanf:"max_conn_lifetime" env:"POSTGRES_USER"`
+	Postgresql      string `koanf:"postgresql" env:"POSTGRES_USER"`
+	MaxOpenConn     int    `koanf:"max_open_conn" env:"POSTGRES_USER"`
+	MaxIdleConn     int    `koanf:"max_idle_conn" env:"POSTGRES_USER"`
+}
+
+type CoreStruct struct {
+	ApiAddress string `koanf:"api-address" env:"CORE_ADDRESS"`
+}
+
+type AuthStruct struct {
+	Sso     AuthSsoStruct     `koanf:"sso"`
+	Session AuthSessionStruct `koanf:"session"`
+}
+
+type AuthSsoStruct struct {
+	Client AuthSsoClientStruct `koanf:"client"`
+	Server AuthSsoServerStruct `koanf:"server"`
+}
+
+type AuthSsoClientStruct struct {
+	BaseUrl      string   `koanf:"base_url" env:"AUTH_SSO_CLIENT_BASE_URL"`
+	ClientId     string   `koanf:"client_id" env:"AUTH_SSO_CLIENT_BASE_URL"`
+	ClientSecret string   `koanf:"client_secret" env:"AUTH_SSO_CLIENT_BASE_URL"`
+	Scopes       []string `koanf:"scopes" env:"AUTH_SSO_CLIENT_BASE_URL"`
+}
+
+type AuthSsoServerStruct struct {
+	Preset string `koanf:"preset" env:"AUTH_SSO_CLIENT_BASE_URL"`
+}
+
+type AuthSessionStruct struct {
+	TokenValidation string                         `koanf:"token_validation" env:"AUTH_SSO_CLIENT_BASE_URL"`
+	AudWhiteList    []string                       `koanf:"aud_white_list" env:"AUTH_SSO_CLIENT_BASE_URL"`
+	AccessCookie    AuthSessionAccessCookieStruct  `koanf:"access_cookie"`
+	RefreshCookie   AuthSessionRefreshCookieStruct `koanf:"refresh_cookie"`
+}
+
+type AuthSessionAccessCookieStruct struct {
+	SameSite int    `koanf:"same_site" env:"AUTH_SSO_CLIENT_BASE_URL"`
+	Secure   string `koanf:"secure" env:"AUTH_SSO_CLIENT_BASE_URL"`
+	Name     string `koanf:"name" env:"AUTH_SSO_CLIENT_BASE_URL"`
+	Domain   string `koanf:"domain" env:"AUTH_SSO_CLIENT_BASE_URL"`
+	Path     string `koanf:"path" env:"AUTH_SSO_CLIENT_BASE_URL"`
+	MaxAge   int    `koanf:"max_age" env:"AUTH_SSO_CLIENT_BASE_URL"`
+}
+
+type AuthSessionRefreshCookieStruct struct {
+	Domain   string `koanf:"domain" env:"AUTH_SSO_CLIENT_BASE_URL"`
+	Path     string `koanf:"path" env:"AUTH_SSO_CLIENT_BASE_URL"`
+	MaxAge   int    `koanf:"max_age" env:"AUTH_SSO_CLIENT_BASE_URL"`
+	SameSite int    `koanf:"same_site" env:"AUTH_SSO_CLIENT_BASE_URL"`
+	Secure   string `koanf:"secure" env:"AUTH_SSO_CLIENT_BASE_URL"`
+	Name     string `koanf:"name" env:"AUTH_SSO_CLIENT_BASE_URL"`
+}
 
 func NewConfig() (*Config, error) {
+	k := koanf.New(".")
+
 	// Загружаем конфигурацию из файла
 	if err := k.Load(file.Provider("config/config.yaml"), yaml.Parser()); err != nil {
 		return nil, fmt.Errorf("error loading config file: %w", err)

@@ -12,9 +12,9 @@ import (
 	"github.com/knadh/koanf/v2"
 )
 
-var k = koanf.New(".")
-
 func LoadConfig() (*Config, error) {
+	k := koanf.New(".")
+
 	// 1. Загружаем базовую конфигурацию из YAML
 	configFile := "config/config.yaml"
 	if _, err := os.Stat(configFile); os.IsNotExist(err) {

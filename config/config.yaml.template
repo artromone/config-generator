@@ -1,28 +1,71 @@
-app:
-  name: "${APP_NAME}"
-  version: "${APP_VERSION}"
+# config/config.yaml.template
+title: &title project-staging
 
-http:
-  port: "${HTTP_PORT}"
-  use_prefork_mode: "${HTTP_USE_PREFORK_MODE:false}"
+env: stage # dev, stage, prod
+
+server:
+  address: ":8080"
+  base_path: "/api/project/v1"
+
+postgres:
+  postgresql: "postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:${POSTGRES_PORT}/${POSTGRES_DB}?search_path=${POSTGRES_SCHEMA}&sslmode=${POSTGRES_SSL}"
+  max_open_conn: 50
+  max_idle_conn: 2
+  max_conn_lifetime: "15s"
+
+core:
+  api-address: "${CORE_ADDRESS}"
+
+auth:
+  sso:
+    client:
+      base_url: "${AUTH_SSO_CLIENT_BASE_URL}"
+      client_id: "${CLIENT_ID}"
+      client_secret: "${CLIENT_SECRET}"
+      scopes:
+        - "stage"
+    server:
+      preset: "${AUTH_SSO_SERVER_PRESET}"
+
+  session:
+    access_cookie:
+      name: "${AUTH_SESSION_ACCESS_COOKIE_NAME}"
+      domain: "${AUTH_SESSION_ACCESS_COOKIE_DOMAIN}"
+      path: "/"
+      max_age: 14400
+      same_site: 2
+      secure: "${AUTH_SESSION_COOKIE_SECURE:false}"
+    refresh_cookie:
+      name: "${AUTH_SESSION_REFRESH_COOKIE_NAME}"
+      domain: "${AUTH_SESSION_REFRESH_COOKIE_DOMAIN}"
+      path: "/"
+      max_age: 14400
+      same_site: 2
+      secure: "${AUTH_SESSION_COOKIE_SECURE:false}"
+    token_validation: "${AUTH_SESSION_TOKEN_VALIDATION:true}"
+    aud_white_list:
+      - "stage"
 
 log:
-  level: "${LOG_LEVEL}"
+  title: *title
+  output: "stdout"
+  level: "debug"
+  prettyLog: false
 
-database:
-  pool_max: "${DATABASE_POOL_MAX}"
-  url: "${DATABASE_URL}"
+telemetry:
+  address: ":3000"
+  enable_profiling: true
+  monitoring:
+    collector:
+      namespace: "product"
+  trace:
+    collector_endpoint: "http://localhost:4318/v1/traces"
+    fraction: 1.0
+    service_name: *title
+    environment: "local"
+    options:
+      log_on_span: true
+    attributes:
+      first_tag: "test"
+      second_tag: "123"
 
-grpc:
-  port: "${GRPC_PORT}"
-
-rmq:
-  server_exchange: "${RMQ_RPC_SERVER}"
-  client_exchange: "${RMQ_RPC_CLIENT}"
-  url: "${RMQ_URL}"
-
-metrics:
-  enabled: "${METRICS_ENABLED:true}"
-
-swagger:
-  enabled: "${SWAGGER_ENABLED:false}"
